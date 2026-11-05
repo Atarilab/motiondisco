@@ -1,0 +1,61 @@
+MotionDisco
+Copyright 2026 The MotionDisco Authors (Ilyass Taouil, Michal Ciebelski,
+Shafeef Omar, Haizhou Zhao, Angela Dai, Aaron M. Johnson, Majid Khadiv)
+
+This product includes software derived from ShinkaEvolve
+(https://github.com/SakanaAI/ShinkaEvolve), Copyright 2025 Sakana AI,
+licensed under the Apache License, Version 2.0 (see LICENSE).
+
+The search engine in shinka/, its tests, docs/, skills/, mkdocs.yml and the
+generic examples are based on ShinkaEvolve at commit 8adc053
+(2026-10-05). Files that do not exist in that version were added by the
+MotionDisco authors. The MotionDisco authors modified the following
+ShinkaEvolve files; among other changes, the package is distributed as
+"motiondisco" and the commands are renamed from shinka_* to motiondisco_*:
+
+  .gitignore
+  CHANGELOG.md
+  CONTRIBUTING.md
+  README.md
+  docs/agentic_usage.md
+  docs/cli_usage.md
+  docs/configuration.md
+  docs/getting_started.md
+  docs/index.md
+  docs/webui.md
+  examples/shinka_tutorial.ipynb
+  examples/sine_approx_headless/README.md
+  mkdocs.yml
+  pyproject.toml
+  shinka/cli/models.py
+  shinka/cli/run.py
+  shinka/cli/run_config.py
+  shinka/configs/__init__.py
+  shinka/configs/database/island_small.yaml
+  shinka/configs/evolution/large_budget.yaml
+  shinka/core/async_runner.py
+  shinka/core/config.py
+  shinka/core/sampler.py
+  shinka/database/dbase.py
+  shinka/database/islands.py
+  shinka/database/parents.py
+  shinka/launch_hydra.py
+  shinka/llm/client.py
+  shinka/llm/kwargs.py
+  shinka/llm/llm.py
+  shinka/llm/providers/__init__.py
+  shinka/llm/providers/model_resolver.py
+  shinka/llm/providers/pricing.csv
+  shinka/llm/providers/pricing.py
+  shinka/llm/query.py
+  shinka/model_availability.py
+  shinka/webui/visualization.py
+  skills/shinka-run/SKILL.md
+  tests/test_example_model_catalog.py
+  tests/test_headless_provider.py
+  tests/test_model_catalog_startup.py
+  tests/test_motiondisco_models_cli.py (renamed from tests/test_shinka_models_cli.py)
+  tests/test_motiondisco_run_cli.py (renamed from tests/test_shinka_run_cli.py)
+  tests/test_packaging_release.py
+
+FARO (submodules/faro) is a separate project under its own license.

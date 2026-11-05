@@ -1,0 +1,129 @@
+# Same as shinka_small.yaml but routes every LLM/embedding call to a
+# local Ollama server at http://localhost:11434/v1.
+#
+# Prereqs:
+#   ollama serve                              # in another shell
+#   ollama pull qwen2.5-coder:14b
+#   ollama pull qwen2.5-coder:7b
+#   ollama pull embeddinggemma
+#   export LOCAL_OPENAI_API_KEY=local         # optional, defaults to "local"
+#
+# Run:
+#   cd examples/loco_manipulation
+#   python run_evo.py --config_path shinka_ollama.yaml
+
+# Task selection — scene + IC are resolved against the faro
+# registry (submodules/faro/src/scenes/<scene>/...); discrete
+# and continuous goals are auto-discovered from that scene's goals.py.
+# Register new ICs upstream and reference them here by name; switch or
+# sweep variants by editing this block (or copying this file).
+task:
+  scene: example_scene
+  initial_condition: default
+  description: "pick box1 from the floor and place it on table1 (box1 bottom face in contact with table1 top face)"
+
+# Number of evaluation jobs to run in parallel.
+max_evaluation_jobs: 2
+# Number of proposal-generation jobs to run in parallel.
+max_proposal_jobs: 2
+# Number of database worker jobs handling archive/selection updates.
+max_db_workers: 2
+
+# Database/search-state settings for island evolution and archiving.
+db_config:
+  num_islands: 1
+  archive_size: 40
+  elite_selection_ratio: 0.3
+  num_archive_inspirations: 1
+  num_top_k_inspirations: 1
+  migration_interval: 10
+  migration_rate: 0.1
+  island_elitism: true
+  enforce_island_separation: true
+  parent_selection_strategy: weighted
+  parent_selection_lambda: 10
+  archive_selection_strategy: "crowding"
+  island_selection_strategy: equal
+  archive_criteria:
+    combined_score: 1.0
+    loc: -0.3
+  enable_dynamic_islands: true
+  stagnation_threshold: 10
+  island_spawn_strategy: "best"
+  island_spawn_subtree_size: 2
+
+# Evolution loop settings (mutation, model calls, novelty, outputs).
+evo_config:
+  # Show the evaluator's text_feedback (solver feedback, strategy
+  # families) to the LLM; off by default in shinka.
+  use_text_feedback: true
+  patch_types:
+    - diff
+    - full
+    - cross
+  patch_type_probs:
+    - 0.6
+    - 0.3
+    - 0.1
+  num_generations: 100
+  # Ollama returns no cost metadata; the budget never increments.
+  # The run terminates on num_generations instead of dollar spend.
+  max_api_costs: 0.0
+  max_patch_resamples: 3
+  max_patch_attempts: 2
+  max_novelty_attempts: 2
+  job_type: local
+  language: python
+
+  # ----- Local-Ollama LLM routing -------------------------------------
+  # Substitute the model IDs below for whatever you actually have pulled
+  # (`ollama list`). Mixing local and cloud strings in the same list is
+  # allowed — UCB selection will pick between them.
+
+  llm_models:
+    - local/qwen2.5-coder:14b@http://localhost:11434/v1
+  llm_kwargs:
+    temperatures:
+      - 0
+      - 0.5
+      - 1.0
+    max_tokens: 32768
+
+  meta_rec_interval: 5
+  meta_llm_models:
+    - local/qwen2.5-coder:7b@http://localhost:11434/v1
+  meta_llm_kwargs:
+    temperatures:
+      - 0
+    max_tokens: 16384
+
+  embedding_model: local/embeddinggemma@http://localhost:11434/v1
+  code_embed_sim_threshold: 0.99
+
+  novelty_llm_models:
+    - local/qwen2.5-coder:7b@http://localhost:11434/v1
+  novelty_llm_kwargs:
+    temperatures:
+      - 0
+  # ---------------------------------------------------------------------
+
+  init_program_path: initial.py
+
+  llm_dynamic_selection: ucb1
+  llm_dynamic_selection_kwargs:
+    exploration_coef: 1.0
+    cost_aware_coef: 0.7
+  results_dir: results/results_loco_async_ollama
+
+  evolve_prompts: True
+  prompt_evolution_interval: 5
+  prompt_patch_types: ["diff", "full"]
+  prompt_patch_type_probs: [0.5, 0.5]
+  prompt_archive_size: 10
+  prompt_percentile_recompute_interval: 1
+  prompt_ucb_exploration_constant: 2.0
+  prompt_epsilon: 0.25
+  # If you also want prompt evolution to use Ollama (not strictly required;
+  # if absent, the framework reuses llm_models for prompt evolution):
+  prompt_llm_models:
+    - local/qwen2.5-coder:7b@http://localhost:11434/v1

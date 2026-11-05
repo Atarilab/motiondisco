@@ -1,0 +1,46 @@
+# Diversity-oriented island model for loco_manipulation (variant=loco_diverse).
+#
+# - 4 isolated islands (no migration, no dynamic spawning) with different
+#   parent-selection regimes, so lineages explore separately instead of
+#   converging on one island's best plan. Evaluations are slow (minutes),
+#   so ~100 generations give each island ~25 proposals.
+# - MAP-Elites style archive: one program per set of contact patches
+#   (`plan_patches`: which faces the hands touch and which surfaces feet /
+#   objects rest on, order ignored; emitted by evaluate.py when
+#   task.diversity=true). Inside a cell the better score wins; across
+#   cells the ranked criteria (score + plan novelty) only decide eviction
+#   once the archive is full, which 100 cells never are in a 100-gen run.
+# - archive_min_score keeps failed plans (score 0) out of the archive and
+#   therefore out of the parent pools.
+db_config:
+  _target_: shinka.database.DatabaseConfig
+  db_path: "evolution_db.sqlite"
+  num_islands: 4
+  archive_size: 100
+  archive_min_score: 0.0
+  archive_selection_strategy: descriptor
+  archive_descriptor_key: plan_patches
+  archive_criteria:
+    combined_score: 1.0
+    plan_novelty: 0.5
+  elite_selection_ratio: 0.3
+  num_archive_inspirations: 4
+  num_top_k_inspirations: 2
+  migration_interval: 1000
+  migration_rate: 0.0
+  island_elitism: true
+  enforce_island_separation: true
+  parent_selection_strategy: weighted
+  # weighted: score-proportional with a children-count penalty;
+  # cell_rarity: the same, times a bonus for elites of rarely visited
+  # contact-patch cells (see parent_selection_cell_rarity).
+  parent_selection_strategy_per_island:
+    - weighted
+    - weighted
+    - cell_rarity
+    - cell_rarity
+  # Scores of valid plans sit in a narrow band (0.1-0.2 in quality mode);
+  # a soft sigmoid keeps every archived plan samplable.
+  parent_selection_lambda: 2.0
+  parent_selection_cell_rarity: 1.0
+  enable_dynamic_islands: false

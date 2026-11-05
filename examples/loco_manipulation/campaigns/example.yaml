@@ -1,0 +1,31 @@
+# Example data campaign (see data_campaign.py). Edit, then:
+#   python examples/loco_manipulation/data_campaign.py \
+#       examples/loco_manipulation/campaigns/example.yaml --dry-run
+name: example
+out: datasets/example
+
+search:
+  diverse: true
+  score_mode: quality
+
+dataset:
+  samples: 8
+  near_feasible: 0.1
+  max_per_family: 3
+  jobs: 1
+  factors: [mass, size, robot, objects, timing, weights]
+  ranges:
+    mass: [0.5, 2.0]
+    size: [0.85, 1.15]
+
+scenes:
+  - scene: motiondisco.long_dist_pick_place
+    generations: 40
+    layouts: [default, default@table_left, default@table_far]
+  - scene: truck_unload_stack
+    generations: 60
+    layouts: [default, default@near]
+  - scene: floor_stack_carry
+    description: "Carry the stacked boxes to the target spot and set them down still stacked."
+    generations: 30
+    layouts: [default, default@far_stack]

@@ -1,0 +1,72 @@
+# Diversity bundle for loco_manipulation: many different, valid
+# trajectories per task instead of one optimum.
+#
+#   motiondisco_launch task=loco_manipulation variant=loco_diverse cluster=local \
+#       task.scene=motiondisco.box_stacking
+#
+# Combine with task.score_mode=quality to also rank by task quality and
+# TO convergence (see examples/loco_manipulation/scoring.py).
+#
+# Pulls in database/island_diverse (4 isolated islands, descriptor
+# archive keyed by plan_patches) and turns on task.diversity so the
+# evaluator emits plan_patches / plan_novelty and the strategy-family
+# feedback. Do not also pass database=... on the command line — it would
+# replace island_diverse.
+defaults:
+  - override /database@_global_: island_diverse
+  - _self_
+
+variant_suffix: "_diverse"
+
+task:
+  diversity: true
+
+evo_config:
+  # Full rewrites and crossovers jump between strategy families; diffs
+  # refine within one.
+  patch_types: ["diff", "full", "cross"]
+  patch_type_probs: [0.3, 0.5, 0.2]
+  # Full rewrites ask for a new contact set / order / role assignment
+  # instead of shinka's generic "different algorithm" variants.
+  full_patch_variants: null
+  full_patch_variant_texts: ${py:examples.loco_manipulation.prompts.full_rewrite_variants}
+  # The evaluator's text_feedback (solver feedback, explored families)
+  # only reaches the LLM with this on.
+  use_text_feedback: true
+  # One neutral exploration axis per island (island 0 gets none).
+  task_sys_msg_island_suffixes:
+    - ""
+    - >-
+      Exploration axis for this lineage: prefer plans whose SET of contact
+      patches (faces grasped, surfaces the feet and objects rest on, sticking
+      or sliding) is not in the explored list in the feedback. Reordering
+      already-explored contacts is less valuable here.
+    - >-
+      Exploration axis for this lineage: prefer plans that reach the goal with
+      a different ORDER of contact changes than the explored orders (what
+      happens first, what is held while something else changes), reusing
+      contact sets already known to be feasible.
+    - >-
+      Exploration axis for this lineage: prefer plans that assign roles
+      differently from the explored ones (which hand grasps, carries or
+      supports; one-handed versus two-handed; which foot moves when; whether
+      the body braces on the environment).
+  llm_models:
+    - claude-max/claude-opus-5-5
+    - claude-max/claude-sonnet-5-5
+  llm_dynamic_selection: ucb
+  llm_kwargs:
+    # claude-max/ sends no temperature; reasoning effort is its only
+    # sampling knob. Temperatures apply to API-key models only.
+    reasoning_efforts: [low, medium, high]
+    temperatures: [0.5, 1.0]
+    max_tokens: 32768
+  # Plan-level proposal filter (examples/loco_manipulation/plan_precheck.py):
+  # rejects exact duplicates and over-explored strategy families before
+  # the expensive evaluation. Replaces the code-embedding novelty judge,
+  # which compared Python source text and never rejected anything.
+  proposal_filter: examples.loco_manipulation.plan_precheck.precheck
+  max_novelty_attempts: 3
+  # Meta-recommendations push every island toward the current best
+  # program; off for diversity runs.
+  meta_rec_interval: null

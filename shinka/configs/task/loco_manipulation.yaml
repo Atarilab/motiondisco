@@ -1,0 +1,73 @@
+# Task selects a scene + initial condition from the faro registry
+# (submodules/faro/src/scenes/<scene_name>/{scene,initial_conditions}.py).
+# Discrete and continuous goals are auto-discovered from that scene's
+# goals.py. Register new ICs upstream; override `task.*` here (or via
+# CLI / multirun) to switch or sweep variants.
+task:
+  scene: example_scene
+  initial_condition: default
+  description: "pick box1 from the floor and place it on table1 (box1 bottom face in contact with table1 top face)"
+  # Opt-in evaluator modes (examples/loco_manipulation/scoring.py and
+  # plan_signature.py). The defaults reproduce the CoRL ablations.
+  #   score_mode: legacy  -> 1 / (1 + to_cost), sharp gate
+  #               quality -> TO-convergence gate x task quality, partial
+  #                          KSO credit, length-independent violation
+  #   diversity:  true    -> plan_signature / plan_novelty metrics and
+  #                          strategy-family text feedback (pair with
+  #                          variant=loco_diverse for the archive side)
+  score_mode: legacy
+  diversity: false
+
+evaluate_function:
+  _target_: examples.loco_manipulation.evaluate.main
+  program_path: ???
+  results_dir: ???
+  scene: ${task.scene}
+  initial_condition: ${task.initial_condition}
+  description: ${task.description}
+  score_mode: ${task.score_mode}
+  diversity: ${task.diversity}
+
+# Wall-clock limit per evaluation. Without it the runner's hung-job
+# watchdog uses 5x the running mean of past evaluations (+60 s), which
+# killed a 33-mode plan during TO after a single 69 s sample. KSO retries
+# + diagnosis (<= ~15 min) + a first-time moto compile for a new horizon
+# (~20 min) + TO at SHINKA_TO_MAX_ITERS=300 (up to ~25 min single-threaded)
+# need more than the old 40 min, which killed 3 of 60 truck evaluations
+# during TO even at 100 iterations.
+job_config:
+  time: "01:15:00"
+
+distributed_job_config:
+  _target_: shinka.launch.SlurmCondaJobConfig
+  modules:
+  - "cuda/12.4"
+  - "cudnn/8.9.7"
+  - "hpcx/2.20"
+  eval_program_path: "shinka/eval_hydra.py"
+  conda_env: "shinka"
+  time: "01:15:00"
+  cpus: 1
+  gpus: 0
+  mem: "4G"
+
+evo_config:
+  # System prompt is built at config-resolve time from the task fields
+  # above. The ${py:...} resolver (shinka/configs/__init__.py) calls
+  # build_task_sys_msg(scene, ic, description, score_mode, diversity).
+  task_sys_msg: ${py:examples.loco_manipulation.prompts.build_task_sys_msg,${task.scene},${task.initial_condition},${task.description},${task.score_mode},${task.diversity}}
+  language: "python"
+  init_program_path: "examples/loco_manipulation/initial.py"
+  # Skip the "parametric_design" full-rewrite variant: its tuning advice
+  # (learning rates, thresholds, ...) does not apply to contact plans.
+  full_patch_variants:
+    - default
+    - different_algorithm
+    - context_motivated
+    - structural_redesign
+  job_type: "slurm_conda"
+  # The evaluator's text_feedback (solver feedback, duplicate / over-cap
+  # notes, strategy families) only reaches the LLM with this on.
+  use_text_feedback: true
+
+exp_name: "shinka_loco_manipulation"

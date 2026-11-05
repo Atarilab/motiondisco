@@ -1,0 +1,32 @@
+# Route every LLM and embedding call to a local Ollama server
+# (http://localhost:11434/v1) instead of cloud providers.
+#
+# Use it with any task config, e.g.:
+#   motiondisco_launch task=loco_manipulation variant=ollama_local cluster=local
+#
+# Prereqs:
+#   ollama serve                              # in another shell
+#   ollama pull qwen2.5-coder:14b             # mutation model
+#   ollama pull qwen2.5-coder:7b              # meta / novelty / prompt-evo
+#   ollama pull embeddinggemma                # OpenAI-compatible embeddings
+#   export LOCAL_OPENAI_API_KEY=local         # optional, defaults to "local"
+#
+# Substitute the model IDs below for whatever you actually have pulled
+# (`ollama list`). Mixing local and cloud strings in the same list is
+# allowed — UCB selection will pick between them.
+
+variant_suffix: "_ollama"
+
+evo_config:
+  llm_models:
+    - local/qwen2.5-coder:14b@http://localhost:11434/v1
+  meta_llm_models:
+    - local/qwen2.5-coder:7b@http://localhost:11434/v1
+  novelty_llm_models:
+    - local/qwen2.5-coder:7b@http://localhost:11434/v1
+  prompt_llm_models:
+    - local/qwen2.5-coder:7b@http://localhost:11434/v1
+  embedding_model: local/embeddinggemma@http://localhost:11434/v1
+  # Ollama returns no cost metadata, so the budget never increments.
+  # The run terminates on `num_generations` instead of dollar spend.
+  max_api_costs: 0.0

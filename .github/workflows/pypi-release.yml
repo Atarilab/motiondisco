@@ -1,0 +1,53 @@
+name: PyPI Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Verify tag matches package version
+        run: |
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          PACKAGE_VERSION="$(python - <<'PY'
+          from pathlib import Path
+          import re
+
+          init_py = Path("shinka/__init__.py").read_text(encoding="utf-8")
+          match = re.search(r'^__version__ = "([^"]+)"', init_py, re.MULTILINE)
+          if not match:
+              raise SystemExit("Could not find __version__ in shinka/__init__.py")
+          print(match.group(1))
+          PY
+          )"
+          test "$TAG_VERSION" = "$PACKAGE_VERSION"
+
+      - name: Build distributions
+        run: uv run --with build python -m build
+
+      - name: Check package metadata
+        run: uv run --with twine twine check dist/*
+
+      - name: Reject gitignored files in release artifacts
+        run: uv run --with python-dotenv python -m shinka.release_check dist/*
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1

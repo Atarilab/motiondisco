@@ -1,0 +1,44 @@
+# First data campaign: five single-robot scenes likely to converge, each
+# with its default layout plus one layout variant (10 searches).
+#
+#   python examples/loco_manipulation/data_campaign.py \
+#       examples/loco_manipulation/campaigns/batch1.yaml --dry-run
+#   nice -n 19 python examples/loco_manipulation/data_campaign.py \
+#       examples/loco_manipulation/campaigns/batch1.yaml
+#
+# Rough cost at one moto thread: a 40-generation search is ~3-5 h, and
+# each dataset sample ~1-2 min after a ~20 min first compile per plan
+# length. Rerunning the command resumes (existing searches are skipped,
+# finished samples come from the manifest). More layouts per scene are in
+# layouts.py; add them to a scene's list to search them too.
+name: batch1
+out: datasets/batch1
+
+search:
+  diverse: true
+  score_mode: quality
+
+dataset:
+  samples: 6
+  near_feasible: 0.1
+  max_per_family: 2
+  jobs: 1
+  factors: [mass, size, robot, objects, timing, weights]
+
+scenes:
+  - scene: motiondisco.long_dist_pick_place
+    generations: 40
+    layouts: [default, default@table_left]      # also: default@table_far, default@box_side
+  - scene: motiondisco.box_stacking
+    generations: 40
+    layouts: [default, default@table_far]       # also: default@side_start
+  - scene: motiondisco.climb_table_with_box
+    generations: 40
+    layouts: [default, default@table_far]       # also: default@box_left, default@start_back
+  - scene: motiondisco.under_table_pick_place
+    generations: 40
+    layouts: [default, default@box_left]        # also: default@table_far, default@start_side
+  - scene: floor_stack_carry
+    description: "Carry the two stacked boxes to the target spot and set them down there, still stacked."
+    generations: 40
+    layouts: [default, default@far_stack]       # also: default@side_start
